@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Manager (Django + JavaScript)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    .task {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+
+    .task h3 {
+      margin-top: 0;
+    }
+
+    .meta {
+      margin: 6px 0;
+      color: #444;
+    }
+
+    .overdue {
+      color: red;
+      font-weight: bold;
+    }
+
+    .done {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .delete-btn {
+      background: #d9534f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .toggle-btn {
+      background: #0275d8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .add-btn {
+      background: #5cb85c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Task Manager (Django + JavaScript)</h1>
+
+    <form id="taskForm">
+      <input type="text" id="title" placeholder="Enter task title" required />
+      <input type="date" id="due_date" />
+
+      <div class="checkbox-row">
+        <label for="completed">Completed</label>
+        <input type="checkbox" id="completed" />
+      </div>
+
+      <button type="submit" class="add-btn">Add Task</button>
+    </form>
+
+    <div id="taskList"></div>
+  </div>
+
+  <script>
+    const apiUrl = "http://127.0.0.1:8000/api/tasks/";
+    const taskList = document.getElementById("taskList");
+    const taskForm = document.getElementById("taskForm");
+
+    async function fetchTasks() {
+      const response = await fetch(apiUrl);
+      const tasks = await response.json();
+
+      taskList.innerHTML = "";
+
+      tasks.forEach(task => {
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task";
+
+        taskDiv.innerHTML = `
+          <h3 class="${task.completed ? 'done' : ''}">${task.title}</h3>
+          <p class="meta">Completed: ${task.completed}</p>
+          <p class="meta">Created At: ${task.created_at}</p>
+          <p class="meta">Due Date: ${task.due_date || "None"}</p>
+          <p class="meta ${task.is_overdue ? 'overdue' : ''}">Overdue: ${task.is_overdue}</p>
+          <div class="actions">
+            <button class="toggle-btn" onclick="toggleTaskCompleted(${task.id}, ${task.completed})">
+              ${task.completed ? "Undo" : "Complete"}
+            </button>
+            <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+          </div>
+        `;
+
+        taskList.appendChild(taskDiv);
+      });
+    }
+
+    taskForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newTask = {
+        title: document.getElementById("title").value,
+        due_date: document.getElementById("due_date").value || null,
+        completed: document.getElementById("completed").checked
+      };
+
+      await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newTask)
+      });
+
+      taskForm.reset();
+      fetchTasks();
+    });
+
+    async function toggleTaskCompleted(id, completed) {
+      await fetch(`${apiUrl}${id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          completed: !completed
+        })
+      });
+
+      fetchTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch(`${apiUrl}${id}/`, {
+        method: "DELETE"
+      });
+
+      fetchTasks();
+    }
+
+    fetchTasks();
+  </script>
+</body>
+</html>
