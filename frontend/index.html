@@ -123,84 +123,106 @@
 
     <div id="taskList"></div>
   </div>
+<script>
+  const apiUrl = "http://127.0.0.1:8000/api/tasks/";
+  const taskList = document.getElementById("taskList");
+  const taskForm = document.getElementById("taskForm");
 
-  <script>
-    const apiUrl = "http://127.0.0.1:8000/api/tasks/";
-    const taskList = document.getElementById("taskList");
-    const taskForm = document.getElementById("taskForm");
-
-    async function fetchTasks() {
-      const response = await fetch(apiUrl);
-      const tasks = await response.json();
-
-      taskList.innerHTML = "";
-
-      tasks.forEach(task => {
-        const taskDiv = document.createElement("div");
-        taskDiv.className = "task";
-
-        taskDiv.innerHTML = `
-          <h3 class="${task.completed ? 'done' : ''}">${task.title}</h3>
-          <p class="meta">Completed: ${task.completed}</p>
-          <p class="meta">Created At: ${task.created_at}</p>
-          <p class="meta">Due Date: ${task.due_date || "None"}</p>
-          <p class="meta ${task.is_overdue ? 'overdue' : ''}">Overdue: ${task.is_overdue}</p>
-          <div class="actions">
-            <button class="toggle-btn" onclick="toggleTaskCompleted(${task.id}, ${task.completed})">
-              ${task.completed ? "Undo" : "Complete"}
-            </button>
-            <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
-          </div>
-        `;
-
-        taskList.appendChild(taskDiv);
-      });
+  async function fetchTasks() {
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`Fetch tasks failed: ${response.status}`);
     }
 
-    taskForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    const tasks = await response.json();
+    taskList.innerHTML = "";
 
-      const newTask = {
-        title: document.getElementById("title").value,
-        due_date: document.getElementById("due_date").value || null,
-        completed: document.getElementById("completed").checked
-      };
+    tasks.forEach(task => {
+      const taskDiv = document.createElement("div");
+      taskDiv.className = "task";
 
-      await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(newTask)
-      });
+      taskDiv.innerHTML = `
+        <h3 class="${task.completed ? 'done' : ''}">${task.title}</h3>
+        <p class="meta">Completed: ${task.completed}</p>
+        <p class="meta">Created At: ${task.created_at}</p>
+        <p class="meta">Due Date: ${task.due_date || "None"}</p>
+        <p class="meta ${task.is_overdue ? 'overdue' : ''}">Overdue: ${task.is_overdue}</p>
+        <div class="actions">
+          <button class="toggle-btn" onclick="toggleTaskCompleted(${task.id}, ${task.completed})">
+            ${task.completed ? "Undo" : "Complete"}
+          </button>
+          <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+        </div>
+      `;
 
-      taskForm.reset();
-      fetchTasks();
+      taskList.appendChild(taskDiv);
+    });
+  }
+
+  taskForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const newTask = {
+      title: document.getElementById("title").value,
+      due_date: document.getElementById("due_date").value || null,
+      completed: document.getElementById("completed").checked
+    };
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(newTask)
     });
 
-    async function toggleTaskCompleted(id, completed) {
-      await fetch(`${apiUrl}${id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          completed: !completed
-        })
-      });
-
-      fetchTasks();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Create task failed:", errorText);
+      return;
     }
 
-    async function deleteTask(id) {
-      await fetch(`${apiUrl}${id}/`, {
-        method: "DELETE"
-      });
+    taskForm.reset();
+    fetchTasks();
+  });
 
-      fetchTasks();
+  async function toggleTaskCompleted(id, completed) {
+    const response = await fetch(`${apiUrl}${id}/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        completed: !completed
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Toggle failed:", errorText);
+      return;
     }
 
     fetchTasks();
-  </script>
+  }
+
+  async function deleteTask(id) {
+    const response = await fetch(`${apiUrl}${id}/`, {
+      method: "DELETE"
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Delete failed:", errorText);
+      return;
+    }
+
+    fetchTasks();
+  }
+
+  fetchTasks();
+</script>
+  
+   
 </body>
 </html>
